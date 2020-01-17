@@ -15,7 +15,8 @@ import arrow
 import pytest
 from flask_security import login_user
 
-from invenio_circulation.api import is_item_available_for_checkout
+from invenio_circulation.api import is_item_at_desk_available_for_checkout, \
+    is_item_available_for_checkout
 from invenio_circulation.errors import ItemDoNotMatchError, \
     LoanMaxExtensionError, NoValidTransitionAvailableError, \
     RecordCannotBeRequestedError, TransitionConstraintsViolationError
@@ -506,9 +507,6 @@ def test_item_availability(indexed_loans):
         item_pid=dict(type="itemid", value="item_in_transit_4")
     )
     assert not is_item_available_for_checkout(
-        item_pid=dict(type="itemid", value="item_at_desk_5")
-    )
-    assert not is_item_available_for_checkout(
         item_pid=dict(type="itemid", value="item_pending_on_loan_6")
     )
     assert is_item_available_for_checkout(
@@ -516,6 +514,15 @@ def test_item_availability(indexed_loans):
     )
     assert is_item_available_for_checkout(
         item_pid=dict(type="itemid", value="no_loan")
+    )
+    # item is not available because it has a loan with state ITEM_AT_DESK
+    assert not is_item_available_for_checkout(
+        item_pid=dict(type="itemid", value="item_at_desk_5")
+    )
+    # item is available because the checked-out patron owns the active loan
+    assert is_item_at_desk_available_for_checkout(
+            item_pid=dict(type="itemid", value="item_at_desk_5"),
+            patron_pid="1"
     )
 
 

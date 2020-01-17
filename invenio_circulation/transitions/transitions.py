@@ -157,12 +157,19 @@ class ToItemOnLoan(Transition):
         _ensure_valid_loan_duration(loan)
 
 
-class ItemAtDeskToItemOnLoan(ToItemOnLoan):
+class ItemAtDeskToItemOnLoan(Transition):
     """Check-out action to perform a loan when item ready at desk."""
 
     def before(self, loan, **kwargs):
         """Validate checkout action."""
         super().before(loan, **kwargs)
+
+        self.ensure_at_desk_item_is_available_for_checkout(loan)
+
+        if not kwargs.get("pickup_location_pid") \
+           or "pickup_location_pid" not in loan:
+            loan['pickup_location_pid'] = _get_item_location(loan['item_pid'])
+
         _ensure_valid_loan_duration(loan)
 
 

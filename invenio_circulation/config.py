@@ -47,11 +47,15 @@ CIRCULATION_STATES_LOAN_ACTIVE = ['ITEM_AT_DESK',
 Items that have attached loans with these circulation statuses are
 not available to be loaned by patrons."""
 
-CIRCULATION_STATES_LOAN_COMPLETED = ["ITEM_RETURNED"]
+CIRCULATION_STATES_LOAN_COMPLETED = ['ITEM_RETURNED']
 """Defines the list of states that a loan is considered completed.
 
 Loans with these states are considered as valid past loans for the item they
 refer to."""
+
+CIRCULATION_STATES_LOAN_ACTIVE_EXCEPT = ['ITEM_AT_DESK']
+"""Defines the list of Loan states among the CIRCULATION_STATES_LOAN_ACTIVE
+for which a checkout, for the concerned patron, is allowed."""
 
 CIRCULATION_STATES_LOAN_CANCELLED = ["CANCELLED"]
 """Defines the list of states for which the loan is considered cancelled."""

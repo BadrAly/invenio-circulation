@@ -15,7 +15,8 @@ import arrow
 from flask import current_app
 from invenio_db import db
 
-from ..api import Loan, is_item_available_for_checkout
+from ..api import Loan, is_item_at_desk_available_for_checkout, \
+    is_item_available_for_checkout
 from ..errors import DocumentDoNotMatchError, DocumentNotAvailableError, \
     InvalidLoanStateError, InvalidPermissionError, ItemNotAvailableError, \
     MissingRequiredParameterError, TransitionConditionsFailedError, \
@@ -132,8 +133,8 @@ class Transition(object):
         )
         self.validate_transition_states()
 
-    def ensure_item_is_available_for_checkout(self, loan):
-        """Validate that an item is available."""
+    def _check_item_before_availability(self, loan):
+        """Common check on item before availability check."""
         if "item_pid" not in loan:
             msg = "Item not set for loan #'{}'".format(loan["pid"])
             raise TransitionConstraintsViolationError(description=msg)
@@ -142,10 +143,33 @@ class Transition(object):
             raise ItemNotAvailableError(item_pid=loan["item_pid"],
                                         transition=self.dest)
 
+    def ensure_item_is_available_for_checkout(self, loan):
+        """Validate that an item is available."""
+        self._check_item_before_availability(loan)
+
         if not is_item_available_for_checkout(loan["item_pid"]):
             raise ItemNotAvailableError(
                 item_pid=loan["item_pid"], transition=self.dest
             )
+
+    def ensure_at_desk_item_is_available_for_checkout(self, loan):
+        """Validate that an item at desk is available for checkout."""
+        self._check_item_before_availability(loan)
+
+        # patron_pid is mandatory for next steps
+        if 'patron_pid' not in loan:
+            msg = "Patron not set for loan with pid '{}'".format(loan['pid'])
+            raise TransitionConstraintsViolationError(description=msg)
+
+        # Some exceptions occurs with specific items and a given patron
+        # For example: ITEM_AT_DESK is available for the patron's loan
+        is_available = is_item_at_desk_available_for_checkout(
+            loan['item_pid'],
+            loan['patron_pid']
+        )
+        if not is_available:
+            raise ItemNotAvailableError(
+                item_pid=loan['item_pid'], transition=self.dest)
 
     def validate_transition_states(self):
         """Ensure that source and destination states are valid."""
