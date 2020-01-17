@@ -132,8 +132,8 @@ class Transition(object):
         )
         self.validate_transition_states()
 
-    def ensure_item_is_available_for_checkout(self, loan):
-        """Validate that an item is available."""
+    def _check_item_before_availability(self, loan):
+        """Common check on item before availability check."""
         if "item_pid" not in loan:
             msg = "Item not set for loan #'{}'".format(loan["pid"])
             raise TransitionConstraintsViolationError(description=msg)
@@ -141,6 +141,10 @@ class Transition(object):
         if not current_app.config["CIRCULATION_ITEM_EXISTS"](loan["item_pid"]):
             raise ItemNotAvailableError(item_pid=loan["item_pid"],
                                         transition=self.dest)
+
+    def ensure_item_is_available_for_checkout(self, loan):
+        """Validate that an item is available."""
+        self._check_item_before_availability(loan)
 
         if not is_item_available_for_checkout(loan["item_pid"]):
             raise ItemNotAvailableError(

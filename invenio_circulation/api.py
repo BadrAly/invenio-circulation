@@ -16,7 +16,7 @@ from invenio_records.api import Record
 
 from .errors import MissingRequiredParameterError, MultipleLoansOnItemError
 from .pidstore.pids import CIRCULATION_LOAN_PID_TYPE
-from .search.api import search_by_pid
+from .search.api import search_by_patron_item_or_document, search_by_pid
 from .utils import str2datetime
 
 
@@ -130,6 +130,28 @@ def is_item_available_for_checkout(item_pid):
         return search_result.hits.total.value == 0
     else:
         return search_result.hits.total == 0
+
+
+def is_item_at_desk_available_for_checkout(item_pid, patron_pid):
+    """Return True if the ITEM_AT_DESK is available for loan, False instead."""
+    # Try first to accept the availability for given patron
+    item_exception_loans = 0
+    search = search_by_patron_item_or_document(
+        item_pid=item_pid,
+        patron_pid=patron_pid,
+        filter_states=["ITEM_AT_DESK"],
+    )
+    search_result = search.execute()
+    if ES_VERSION[0] >= 7:
+        item_exception_loans = search_result.hits.total.value
+    else:
+        item_exception_loans = search_result.hits.total
+
+    if item_exception_loans == 1:
+        return True
+
+    # Then use normal behaviour if it failed with patron
+    return is_item_available_for_checkout(item_pid)
 
 
 def can_be_requested(loan):

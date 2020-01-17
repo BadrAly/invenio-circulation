@@ -157,6 +157,16 @@ def mock_is_item_available_for_checkout():
 
 
 @pytest.fixture()
+def mock_is_item_at_desk_available_for_checkout():
+    """Mock item_at_desk_available check."""
+    path = \
+        "invenio_circulation.api.is_item_at_desk_available_for_checkout"
+    with mock.patch(path) as mock_is_item_at_desk_available_for_checkout:
+        mock_is_item_at_desk_available_for_checkout.return_value = False
+        yield mock_is_item_at_desk_available_for_checkout
+
+
+@pytest.fixture()
 def mock_get_pending_loans_by_doc_pid():
     """Mock item_available check."""
     path = \

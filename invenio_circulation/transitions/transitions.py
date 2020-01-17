@@ -14,7 +14,8 @@ from invenio_db import db
 from invenio_circulation.proxies import current_circulation
 
 from ..api import can_be_requested, get_available_item_by_doc_pid, \
-    get_document_pid_by_item_pid, get_pending_loans_by_doc_pid
+    get_document_pid_by_item_pid, get_pending_loans_by_doc_pid, \
+    is_item_at_desk_available_for_checkout
 from ..errors import ItemDoNotMatchError, ItemNotAvailableError, \
     LoanMaxExtensionError, RecordCannotBeRequestedError, \
     TransitionConditionsFailedError, TransitionConstraintsViolationError
@@ -140,6 +141,13 @@ def _get_item_location(item_pid):
     return current_app.config["CIRCULATION_ITEM_LOCATION_RETRIEVER"](item_pid)
 
 
+def _ensure_default_pickup_location(loan, context):
+    """Set default pickup location if no one."""
+    if not context.get("pickup_location_pid") \
+            or "pickup_location_pid" not in loan:
+        loan['pickup_location_pid'] = _get_item_location(loan['item_pid'])
+
+
 class ToItemOnLoan(Transition):
     """Action to checkout."""
 
@@ -149,21 +157,42 @@ class ToItemOnLoan(Transition):
 
         self.ensure_item_is_available_for_checkout(loan)
 
-        no_pickup = not kwargs.get("pickup_location_pid") \
-            or "pickup_location_pid" not in loan
-        if no_pickup:
-            loan["pickup_location_pid"] = _get_item_location(loan["item_pid"])
+        _ensure_default_pickup_location(loan, kwargs)
 
         _ensure_valid_loan_duration(loan)
 
 
-class ItemAtDeskToItemOnLoan(ToItemOnLoan):
+class ItemAtDeskToItemOnLoan(Transition):
     """Check-out action to perform a loan when item ready at desk."""
 
     def before(self, loan, **kwargs):
         """Validate checkout action."""
         super().before(loan, **kwargs)
+
+        self.ensure_at_desk_item_is_available_for_checkout(loan)
+
+        _ensure_default_pickup_location(loan, kwargs)
+
         _ensure_valid_loan_duration(loan)
+
+    def ensure_at_desk_item_is_available_for_checkout(self, loan):
+        """Validate that an item at desk is available for checkout."""
+        self._check_item_before_availability(loan)
+
+        # patron_pid is mandatory for next steps
+        if 'patron_pid' not in loan:
+            msg = "Patron not set for loan with pid '{}'".format(loan['pid'])
+            raise TransitionConstraintsViolationError(description=msg)
+
+        # Some exceptions occurs with specific items and a given patron
+        # For example: ITEM_AT_DESK is available for the patron's loan
+        is_available = is_item_at_desk_available_for_checkout(
+            loan['item_pid'],
+            loan['patron_pid']
+        )
+        if not is_available:
+            raise ItemNotAvailableError(
+                item_pid=loan['item_pid'], transition=self.dest)
 
 
 def check_request_on_document(f):
