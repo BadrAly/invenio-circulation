@@ -184,8 +184,6 @@ class ItemAtDeskToItemOnLoan(Transition):
             msg = "Patron not set for loan with pid '{}'".format(loan['pid'])
             raise TransitionConstraintsViolationError(description=msg)
 
-        # Some exceptions occurs with specific items and a given patron
-        # For example: ITEM_AT_DESK is available for the patron's loan
         is_available = is_item_at_desk_available_for_checkout(
             loan['item_pid'],
             loan['patron_pid']

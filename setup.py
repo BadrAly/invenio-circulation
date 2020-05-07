@@ -75,7 +75,7 @@ setup_requires = ['Babel>=1.3', 'pytest-runner>=2.6.2']
 
 install_requires = [
     'arrow>=0.15.0',
-    'Flask-BabelEx>=0.9.3',
+    'invenio-i18n>=1.0.0',
     'invenio-base>=1.0.1',
     'invenio-access>=1.3.1',
     'invenio-logging>=1.2.1',
